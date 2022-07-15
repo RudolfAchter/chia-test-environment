@@ -3,14 +3,33 @@
   remote_user: ansible
   become: yes
   tasks:
-    - apt:
+    - name: Install necessary packages
+      apt:
         update_cache: yes
         name: [
           openssh-server, ubuntu-desktop-minimal, xrdp, git
           ]
         state: latest
-    - apt:
+    - name: Install latest Chia package
+      apt:
         state: present
         deb: "{{chia_package}}"
     - apt:
         upgrade: yes
+    - name: Fix xrdp colord issue
+      ansible.builtin.copy:
+        src: files/policykit/02-allow-colord.conf
+        dest: /etc/polkit-1/localauthority.conf.d/02-allow-colord.conf
+        mode: '644'
+    - name: dedicated user for chia
+      ansible.builtin.user:
+        name: chia
+        comment: chia dedicated user
+        shell: /bin/bash
+        password: "{{ 'chiatest' | password_hash('sha512', 'mysecretsalt') }}"
+    - name: configure chia testnet
+      ansible.builtin.shell: |
+        chia init
+        chia configure --testnet true
+      become_user: chia
+
