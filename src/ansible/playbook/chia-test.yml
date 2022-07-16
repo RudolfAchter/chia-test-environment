@@ -1,13 +1,15 @@
-- name: Chia Test Environment
+# Tasks specific for Full Node
+- name: Chia Test Environment Full Node
   hosts: fullnode
   remote_user: ansible
   become: yes
   tasks:
-    - name: Install necessary packages
+    - name: Install necessary packages (lasts long 30 min to 2 hours)
       apt:
         update_cache: yes
         name: [
-          openssh-server, ubuntu-desktop-minimal, xrdp, git
+          openssh-server, ubuntu-desktop-minimal, xrdp, git, curl,
+          htop, gnome-tweaks
           ]
         state: latest
     - name: Install latest Chia package
@@ -27,9 +29,96 @@
         comment: chia dedicated user
         shell: /bin/bash
         password: "{{ 'chiatest' | password_hash('sha512', 'mysecretsalt') }}"
-    - name: configure chia testnet
-      ansible.builtin.shell: |
-        chia init
-        chia configure --testnet true
+    - name: install chia service
+      ansible.builtin.copy:
+        src: files/systemd/chia.service
+        dest: /lib/systemd/system/chia.service
+        owner: root
+        group: root
+        mode: '0644'
+    - name: enable chia service
+      ansible.builtin.service:
+        name: chia
+        enabled: yes
+
+
+    - name: configure chia for test environment
       become_user: chia
+      block:
+      - name: configure chia testnet
+        ansible.builtin.shell: 
+          cmd: |
+            chia init
+            chia configure --testnet true
+          creates: /home/chia/.chia/mainnet/config/config.yaml
+      - name: download and unpack chia testnet database
+        when: download_current_testnet_database == true
+        ansible.builtin.shell:
+          cmd: |
+            cd /home/chia/.chia/mainnet/db
+            wget https://databases.chia.net/file/chia-public-databases/blockchain_v2_testnet10.sqlite.gz
+            gunzip blockchain_v2_testnet10.sqlite.gz
+          creates: /home/chia/.chia/mainnet/db/blockchain_v2_testnet10.sqlite
+      - name: create first private key and start farm
+        ansible.builtin.shell:
+          cmd: |
+            chia keys generate
+            chia start farmer
+            echo "first_key_generated" > ~/.chia/first_key_generated.txt
+          creates: ~/.chia/first_key_generated.txt
+
+      #Powershell on x64 Systems
+    - name: Install Powershell (x86_64)
+      when: ansible_facts['architecture'] == 'x86_64'
+      block:
+        - name: Install latest Powershell package (x86_64)
+          apt:
+            state: present
+            deb: "{{powershell_package}}" 
+        - name: Install Powershell (x86_64)
+          apt:
+            update_cache: yes
+            name: [
+              powershell
+              ]
+            state: latest
+      
+      #Powershell on aarch64 Systems
+    - name: Install Powershell (aarch64)
+      when: ansible_facts['architecture'] == 'aarch64'
+      block:
+        - name: Install Powershell for aarch64 via Binary archive
+          ansible.builtin.shell:
+            cmd: |
+              curl -L -o /tmp/powershell.tar.gz {{powershell_package}}
+              mkdir -p /opt/microsoft/powershell/7
+              tar zxf /tmp/powershell.tar.gz -C /opt/microsoft/powershell/7
+              chmod +x /opt/microsoft/powershell/7/pwsh
+              ln -s /opt/microsoft/powershell/7/pwsh /usr/bin/pwsh
+            creates: /opt/microsoft/powershell/7/pwsh
+
+
+#Tasks specific for Farmer
+- name: Chia Test Environment Farmer
+  hosts: farmer
+  tasks:
+    - name: Install MadMax plotter
+      when: install_madmax == true
+      block:
+        - name: MadMax plotter prerequisites
+          apt:
+            update_cache: yes
+            name: [libsodium-dev, cmake, g++, git, build-essential]
+            state: latest
+        - name: Install MadMax plotter from source
+          ansible.builtin.shell:
+            cmd: |
+              cd ~
+              git clone https://github.com/madMAx43v3r/chia-plotter.git
+              cd chia-plotter
+              git submodule update --init
+              ./make_devel.sh
+              cp ~/chia_plot/build/chia_plot /usr/local/bin
+            creates: /usr/local/bin/chia_plot
+
 

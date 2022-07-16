@@ -1,0 +1,15 @@
+[Unit]
+Description=Chia Farmer Service
+After=sshd.service
+
+[Service]
+ExecStart=chia start farmer
+ExecStop=chia stop farmer
+Type=forking
+User=chia
+Group=chia
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
+

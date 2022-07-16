@@ -1,8 +1,9 @@
 all:
   children:
-    farmer:
-      hosts:
-        chiatest.fritz.box
     fullnode:
       hosts:
-        chiatest.fritz.box
+#        chiatest.fritz.box
+        chia-full01.fritz.box
+    farmer:
+      hosts:
+#        chiatest.fritz.box

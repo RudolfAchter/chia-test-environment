@@ -1,1 +1,18 @@
+# Variables can be overriden in host_vars or group_vars
+# see ansible docs: https://docs.ansible.com/ansible/latest/user_guide/playbooks_variables.html
+
+
+ansible_become_pass: !vault |
+  $ANSIBLE_VAULT;1.1;AES256
+  32616238643061373862633235633938373935303865353937316239636539643730393432653538
+  3736343131396263633430336465313764313262653561310a386231386461386430333433623532
+  30616536343232366430353034643534393866616136326138653861356431663039376430336234
+  3539623766356536650a616430613464343437656162353064653034383638363966356664663235
+  3932
+#Override package in host_vars or group_vars
 chia_package: https://download.chia.net/latest/x86_64-Ubuntu-gui
+#Override package in host_vars or group_vars
+powershell_package: https://github.com/PowerShell/PowerShell/releases/download/v7.2.5/powershell-7.2.5-linux-x64.tar.gz
+# When true. The whole Chia Testnet Database is downloaded and extracted before starting chia testnet farm
+# Maybe faster than synchronizing from scratch
+download_current_testnet_database: true

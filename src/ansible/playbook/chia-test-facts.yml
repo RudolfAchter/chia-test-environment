@@ -1,0 +1,8 @@
+- name: Chia Test Environment
+  hosts: fullnode
+  remote_user: ansible
+  become: yes
+  tasks:
+  - name: Show facts available on the system
+    ansible.builtin.debug:
+      var: ansible_facts
