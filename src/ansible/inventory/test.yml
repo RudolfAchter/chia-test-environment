@@ -7,3 +7,6 @@ all:
     farmer:
       hosts:
 #        chiatest.fritz.box
+    x86_64:
+      hosts:
+        chia-full01.fritz.box

@@ -1,0 +1,2 @@
+chia_package: https://download.chia.net/latest/x86_64-Ubuntu-gui
+powershell_package: https://packages.microsoft.com/config/ubuntu/22.04/packages-microsoft-prod.deb
