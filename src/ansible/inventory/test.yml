@@ -1,12 +1,16 @@
 all:
   children:
-    fullnode:
-      hosts:
-#        chiatest.fritz.box
-        chia-full01.fritz.box
-    farmer:
-      hosts:
-#        chiatest.fritz.box
     x86_64:
       hosts:
         chia-full01.fritz.box
+    wallet:
+      hosts: 
+        chia-wallet01.fritz.box
+      children:
+        fullnode:
+          hosts:
+    #        chiatest.fritz.box
+            chia-full01.fritz.box
+        farmer:
+          hosts:
+    #        chiatest.fritz.box

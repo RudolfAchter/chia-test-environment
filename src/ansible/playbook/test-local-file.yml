@@ -1,0 +1,28 @@
+- name: Test local File
+  hosts: wallet
+  remote_user: ansible
+  gather_facts: no
+  become: yes
+  tasks:
+  - name: test
+    debug: msg="{{item}}"
+    loop: "{{ lookup('file', '~/.ssh/id_rsa.pub').splitlines() }}"
+  - name: User ssh folder
+    ansible.builtin.file:
+      state: directory
+      path: /home/chia/.ssh
+      owner: chia
+      group: chia
+  - name: User authorized_keys fille
+    ansible.builtin.file:
+      state: touch
+      path: /home/chia/.ssh/authorized_keys
+      mode: '0600'
+      owner: chia
+      group: chia
+  - name: Install SSH Key
+    loop: "{{ lookup('file', '~/.ssh/id_rsa.pub').splitlines() }}"
+    ansible.builtin.lineinfile:
+      path: /home/chia/.ssh/authorized_keys
+      line: "{{item}}"
+      state: present

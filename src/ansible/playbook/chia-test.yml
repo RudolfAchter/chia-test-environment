@@ -1,6 +1,6 @@
-# Tasks specific for Full Node
-- name: Chia Test Environment Full Node
-  hosts: fullnode
+# Tasks specific for Wallet (all Nodes)
+- name: Chia Test Environment Wallet
+  hosts: wallet
   remote_user: ansible
   become: yes
   tasks:
@@ -8,8 +8,8 @@
       apt:
         update_cache: yes
         name: [
-          openssh-server, ubuntu-desktop-minimal, xrdp, git, curl,
-          htop, gnome-tweaks
+          openssh-server, vim, micro, ubuntu-desktop-minimal, xrdp, git, curl,
+          htop, gnome-tweaks, wget, apt-transport-https, software-properties-common
           ]
         state: latest
     - name: Install latest Chia package
@@ -29,18 +29,30 @@
         comment: chia dedicated user
         shell: /bin/bash
         password: "{{ 'chiatest' | password_hash('sha512', 'mysecretsalt') }}"
-    - name: install chia service
-      ansible.builtin.copy:
-        src: files/systemd/chia.service
-        dest: /lib/systemd/system/chia.service
-        owner: root
-        group: root
-        mode: '0644'
-    - name: enable chia service
-      ansible.builtin.service:
-        name: chia
-        enabled: yes
 
+#    - name: Your PublicKey
+#      debug: msg="{{item}}"
+#      loop: "{{ lookup('file', '~/.ssh/id_rsa.pub').splitlines() }}"
+
+    - name: Chia User ssh folder
+      ansible.builtin.file:
+        state: directory
+        path: /home/chia/.ssh
+        owner: chia
+        group: chia
+    - name: Chia User authorized_keys fille
+      ansible.builtin.file:
+        state: touch
+        path: /home/chia/.ssh/authorized_keys
+        mode: '0600'
+        owner: chia
+        group: chia
+    - name: Install SSH Key
+      loop: "{{ lookup('file', '~/.ssh/id_rsa.pub').splitlines() }}"
+      ansible.builtin.lineinfile:
+        path: /home/chia/.ssh/authorized_keys
+        line: "{{item}}"
+        state: present
 
     - name: configure chia for test environment
       become_user: chia
@@ -63,7 +75,6 @@
         ansible.builtin.shell:
           cmd: |
             chia keys generate
-            chia start farmer
             echo "first_key_generated" > ~/.chia/first_key_generated.txt
           creates: ~/.chia/first_key_generated.txt
 
@@ -71,18 +82,22 @@
     - name: Install Powershell (x86_64)
       when: ansible_facts['architecture'] == 'x86_64'
       block:
-        - name: Install latest Powershell package (x86_64)
-          apt:
-            state: present
-            deb: "{{powershell_package}}" 
+        - name: Install Microsoft Repository
+          ansible.builtin.shell:
+            cmd: |
+              wget -q "https://packages.microsoft.com/config/ubuntu/$(lsb_release -rs)/packages-microsoft-prod.deb"
+              dpkg -i packages-microsoft-prod.deb
+            creates: /etc/apt/trusted.gpg.d/microsoft.gpg
         - name: Install Powershell (x86_64)
           apt:
             update_cache: yes
+            clean: yes
             name: [
               powershell
               ]
             state: latest
       
+
       #Powershell on aarch64 Systems
     - name: Install Powershell (aarch64)
       when: ansible_facts['architecture'] == 'aarch64'
@@ -96,6 +111,58 @@
               chmod +x /opt/microsoft/powershell/7/pwsh
               ln -s /opt/microsoft/powershell/7/pwsh /usr/bin/pwsh
             creates: /opt/microsoft/powershell/7/pwsh
+
+    - name: Get ChiaShell from Github
+      become_user: chia
+      ansible.builtin.shell:
+        cmd: |
+          mkdir -p /home/chia/.config/powershell
+          mkdir -p /home/chia/git
+          git -C /home/chia/git clone https://github.com/RudolfAchter/ChiaShell.git
+        creates: /home/chia/git/ChiaShell/Powershell/Modules/ChiaShell/ChiaShell.psm1
+    - name: Make ChiaShell safe directory
+      ansible.builtin.copy:
+        src: files/git/.gitconfig
+        dest: /home/chia/.gitconfig
+    - name: Pull Current ChiaShell Version
+      ansible.builtin.shell:
+        cmd: |
+          git config --global --add safe.directory /home/chia/git/ChiaShell
+          git -C /home/chia/git/ChiaShell pull
+      register: pull_chiashell
+    - name: ChiaShell pull result
+      debug:
+        var: pull_chiashell
+    - name: Install Modules
+      ansible.builtin.shell:
+        executable: pwsh
+        cmd: |
+          Install-Module PSReadline -Force
+          Install-Module Terminal-Icons -Force
+          Install-Module Microsoft.PowerShell.ConsoleGuiTools -Force
+    - name: Set Powershell Profile for Chia
+      become_user: chia
+      ansible.builtin.copy:
+        src: files/powershell/Microsoft.PowerShell_profile.ps1
+        dest: /home/chia/.config/powershell
+#Tasks specific for FullNode
+- name: Chia Test Environment FullNode
+  hosts: fullnode
+  remote_user: ansible
+  become: yes
+  tasks:
+    - name: install chia service
+      ansible.builtin.copy:
+        src: files/systemd/chia.service
+        dest: /lib/systemd/system/chia.service
+        owner: root
+        group: root
+        mode: '0644'
+    - name: enable chia service
+      ansible.builtin.service:
+        name: chia
+        enabled: yes
+
 
 
 #Tasks specific for Farmer
