@@ -9,7 +9,8 @@
         update_cache: yes
         name: [
           openssh-server, vim, micro, ubuntu-desktop-minimal, xrdp, git, curl,
-          htop, gnome-tweaks, wget, apt-transport-https, software-properties-common
+          htop, gnome-tweaks, wget, apt-transport-https, software-properties-common,
+          asciinema, kazam
           ]
         state: latest
     - name: Install latest Chia package

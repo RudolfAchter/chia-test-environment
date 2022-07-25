@@ -1,0 +1,15 @@
+[Unit]
+Description=Chia Wallet Service
+After=sshd.service
+
+[Service]
+ExecStart=chia start wallet
+ExecStop=chia stop wallet
+Type=forking
+User=chia
+Group=chia
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
+
